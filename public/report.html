@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>รายงานสถิติ - แอดมิน</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+  <style>
+    .admin-wrapper {
+      display: flex;
+      min-height: 100vh;
+    }
+    .admin-content {
+      flex: 1;
+      padding: 2.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="admin-wrapper">
+    <!-- Sidebar -->
+    <div class="col-md-2 sidebar d-flex flex-column">
+      <div class="text-center mb-4">
+        <img src="https://upload.wikimedia.org/wikipedia/th/thumb/0/0d/Thaksin_University_Seal.svg/1200px-Thaksin_University_Seal.svg.png" width="60" class="mb-2" alt="TSU Seal">
+        <h5 class="fw-bold text-primary m-0" style="background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">TSU BORROW</h5>
+        <span class="badge bg-danger mt-1">Admin Portal</span>
+      </div>
+      <hr class="mb-4" style="opacity: 0.1;">
+      <a href="dashboard.html">🏠 แดชบอร์ด</a>
+      <a href="admin.html">🔧 จัดการคลังอุปกรณ์</a>
+      <a href="borrow.html">📦 บันทึกยืม-คืน</a>
+      <a href="history.html">📜 ประวัติทั้งหมด</a>
+      <a href="report.html" class="active">📊 รายงานสถิติ</a>
+      <a href="equipment.html" class="mt-auto border-top pt-3 text-secondary">👁️ หน้าผู้ใช้งาน</a>
+      <a href="#" onclick="logout()" class="text-danger">🚪 ออกจากระบบ</a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="admin-content">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2 class="fw-bold mb-1" style="background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">📊 รายงานสถิติการยืม-คืน</h2>
+          <p class="text-muted">ข้อมูลวิเคราะห์สัดส่วนการยืมแต่ละประเภทและรายการอุปกรณ์ยอดนิยม</p>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <!-- Stats Summary Card -->
+        <div class="col-md-4">
+          <div class="card border-0 p-4 shadow-sm h-100">
+            <h5 class="fw-bold mb-4" style="color: #4f46e5;">สัดส่วนการหมุนเวียนคลัง</h5>
+            <div class="mb-3 d-flex justify-content-between align-items-center">
+              <span class="text-muted fw-semibold">อุปกรณ์พร้อมใช้งานตอนนี้ (ในคลัง)</span>
+              <span id="txtAvailable" class="fw-bold text-success fs-5">...</span>
+            </div>
+            <div class="mb-3 d-flex justify-content-between align-items-center">
+              <span class="text-muted fw-semibold">อุปกรณ์ที่อยู่ข้างนอก (กำลังยืม)</span>
+              <span id="txtBorrowed" class="fw-bold text-warning fs-5">...</span>
+            </div>
+            <hr class="my-3" style="opacity: 0.1;">
+            <div class="mb-2 d-flex justify-content-between align-items-center">
+              <span class="text-dark fw-bold">อุปกรณ์ทั้งหมดในระบบ</span>
+              <span id="txtTotal" class="fw-bold text-primary fs-4">...</span>
+            </div>
+            <div class="progress mt-3" style="height: 10px; border-radius: 8px;">
+              <div id="progAvailable" class="progress-bar bg-success" role="progressbar" style="width: 0%"></div>
+              <div id="progBorrowed" class="progress-bar bg-warning" role="progressbar" style="width: 0%"></div>
+            </div>
+            <div class="d-flex justify-content-between mt-2 small text-muted">
+              <span>คลัง: <span id="lblAvailPct">0%</span></span>
+              <span>ถูกยืม: <span id="lblBorrowPct">0%</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Popular Category Section -->
+        <div class="col-md-8">
+          <div class="card border-0 p-4 shadow-sm h-100">
+            <h5 class="fw-bold mb-4" style="color: #059669;">สถิติการยืมรายหมวดหมู่ (ความนิยมสะสม)</h5>
+            <div id="categoryLeaderboard" class="d-flex flex-column gap-3">
+              <!-- Dynamically populated progress bars -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Popular Equipment Section -->
+        <div class="col-12 mt-4">
+          <div class="card border-0 shadow-sm p-4">
+            <h5 class="fw-bold mb-4" style="color: #1e293b;">🏆 รายการอุปกรณ์ที่มีสถิติการยืมสูงที่สุด (Top Borrowed Equipment)</h5>
+            <div class="table-responsive">
+              <table class="table align-middle">
+                <thead>
+                  <tr>
+                    <th>ลำดับ</th>
+                    <th>ชื่ออุปกรณ์</th>
+                    <th>หมวดหมู่</th>
+                    <th class="text-center">จำนวนครั้งที่ถูกยืม</th>
+                    <th class="text-center">จำนวนชิ้นสะสม</th>
+                  </tr>
+                </thead>
+                <tbody id="popularEquipmentTable">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let loggedAdmin = null;
+
+    // Auth guard
+    (function() {
+      loggedAdmin = JSON.parse(localStorage.getItem('user') || 'null');
+      if (!loggedAdmin || loggedAdmin.role !== 'admin') {
+        alert('เฉพาะผู้ดูแลระบบเท่านั้น');
+        window.location.href = '/login.html';
+      }
+    })();
+
+    function logout() {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      window.location.href = '/login.html';
+    }
+
+    function getAuthHeader() {
+      return { 'Authorization': 'Bearer ' + localStorage.getItem('token') };
+    }
+
+    async function loadReportData() {
+      try {
+        // Fetch overall stats
+        const statsRes = await fetch('/api/borrow/stats', { headers: getAuthHeader() });
+        const stats = await statsRes.json();
+        
+        // Fetch all history to calculate popular statistics
+        const historyRes = await fetch('/api/borrow/all-history', { headers: getAuthHeader() });
+        const history = await historyRes.json();
+
+        if (statsRes.ok && historyRes.ok) {
+          renderOverallStats(stats);
+          calculateAndRenderPopularStats(history);
+        }
+      } catch (err) {
+        console.error("Report data load error", err);
+      }
+    }
+
+    function renderOverallStats(stats) {
+      document.getElementById('txtTotal').textContent = `${stats.total} ชิ้น`;
+      document.getElementById('txtAvailable').textContent = `${stats.available} ชิ้น`;
+      document.getElementById('txtBorrowed').textContent = `${stats.borrowed} ชิ้น`;
+
+      const availPct = stats.total > 0 ? Math.round((stats.available / stats.total) * 100) : 0;
+      const borrowPct = stats.total > 0 ? Math.round((stats.borrowed / stats.total) * 100) : 0;
+
+      document.getElementById('progAvailable').style.width = `${availPct}%`;
+      document.getElementById('progBorrowed').style.width = `${borrowPct}%`;
+
+      document.getElementById('lblAvailPct').textContent = `${availPct}%`;
+      document.getElementById('lblBorrowPct').textContent = `${borrowPct}%`;
+    }
+
+    function calculateAndRenderPopularStats(history) {
+      // 1. Calculate popular categories
+      const categoryCounts = {};
+      const equipmentStats = {};
+
+      history.forEach(record => {
+        const cat = record.category || 'ทั่วไป';
+        const eqName = record.equipmentName || 'อุปกรณ์ภายนอก';
+        const qty = record.quantity || 1;
+
+        // Categories accumulation
+        categoryCounts[cat] = (categoryCounts[cat] || 0) + qty;
+
+        // Equipment popular stats
+        if (!equipmentStats[eqName]) {
+          equipmentStats[eqName] = { name: eqName, category: cat, borrowCount: 0, totalQuantity: 0 };
+        }
+        equipmentStats[eqName].borrowCount += 1;
+        equipmentStats[eqName].totalQuantity += qty;
+      });
+
+      // Render Categories Leaderboard
+      const categoryLeaderboardEl = document.getElementById('categoryLeaderboard');
+      const sortedCategories = Object.keys(categoryCounts).map(name => ({
+        name,
+        count: categoryCounts[name]
+      })).sort((a, b) => b.count - a.count);
+
+      const maxCatCount = sortedCategories.length > 0 ? sortedCategories[0].count : 1;
+
+      if (sortedCategories.length === 0) {
+        categoryLeaderboardEl.innerHTML = '<div class="text-muted text-center py-3">ยังไม่มีข้อมูลการทำรายการยืม</div>';
+      } else {
+        let catHtml = "";
+        sortedCategories.forEach(cat => {
+          const pct = Math.round((cat.count / maxCatCount) * 100);
+          catHtml += `
+            <div>
+              <div class="d-flex justify-content-between mb-1">
+                <span class="fw-semibold text-dark">${cat.name}</span>
+                <span class="fw-bold text-muted">${cat.count} ชิ้น</span>
+              </div>
+              <div class="progress" style="height: 8px; border-radius: 4px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: ${pct}%"></div>
+              </div>
+            </div>
+          `;
+        });
+        categoryLeaderboardEl.innerHTML = catHtml;
+      }
+
+      // Render Popular Equipment Table
+      const eqTableBody = document.getElementById('popularEquipmentTable');
+      const sortedEquipment = Object.values(equipmentStats)
+        .sort((a, b) => b.borrowCount - a.borrowCount)
+        .slice(0, 10); // Top 10
+
+      if (sortedEquipment.length === 0) {
+        eqTableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">ยังไม่มีข้อมูลการทำรายการยืม</td></tr>';
+      } else {
+        let eqHtml = "";
+        sortedEquipment.forEach((eq, index) => {
+          eqHtml += `
+            <tr>
+              <td class="fw-bold text-secondary">${index + 1}</td>
+              <td><strong class="text-dark">${eq.name}</strong></td>
+              <td><span class="badge bg-primary">${eq.category}</span></td>
+              <td class="text-center fw-bold" style="color: #6366f1;">${eq.borrowCount} ครั้ง</td>
+              <td class="text-center fw-bold text-success">${eq.totalQuantity} ชิ้น</td>
+            </tr>
+          `;
+        });
+        eqTableBody.innerHTML = eqHtml;
+      }
+    }
+
+    // Initial load
+    loadReportData();
+  </script>
+</body>
+</html>

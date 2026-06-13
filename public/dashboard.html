@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>แผงควบคุมแอดมิน - ระบบยืมคืนอุปกรณ์</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+  <style>
+    .admin-wrapper {
+      display: flex;
+      min-height: 100vh;
+    }
+    .admin-content {
+      flex: 1;
+      padding: 2.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="admin-wrapper">
+    <!-- Sidebar -->
+    <div class="col-md-2 sidebar d-flex flex-column">
+      <div class="text-center mb-4">
+        <img src="https://upload.wikimedia.org/wikipedia/th/thumb/0/0d/Thaksin_University_Seal.svg/1200px-Thaksin_University_Seal.svg.png" width="60" class="mb-2" alt="TSU Seal">
+        <h5 class="fw-bold text-primary m-0" style="background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">TSU BORROW</h5>
+        <span class="badge bg-danger mt-1">Admin Portal</span>
+      </div>
+      <hr class="mb-4" style="opacity: 0.1;">
+      <a href="dashboard.html" class="active">🏠 แดชบอร์ด</a>
+      <a href="admin.html">🔧 จัดการคลังอุปกรณ์</a>
+      <a href="borrow.html">📦 บันทึกยืม-คืน</a>
+      <a href="history.html">📜 ประวัติทั้งหมด</a>
+      <a href="report.html">📊 รายงานสถิติ</a>
+      <a href="equipment.html" class="mt-auto border-top pt-3 text-secondary">👁️ หน้าผู้ใช้งาน</a>
+      <a href="#" onclick="logout()" class="text-danger">🚪 ออกจากระบบ</a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="admin-content">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2 class="fw-bold mb-1" style="background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">แดชบอร์ดแอดมิน</h2>
+          <p class="text-muted">ข้อมูลสถิติภาพรวมและสถานะของระบบยืม-คืนอุปกรณ์ ณ ปัจจุบัน</p>
+        </div>
+        <div>
+          <span id="adminName" class="fw-semibold text-secondary"></span>
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="row g-4 mt-2">
+        <div class="col-md-3">
+          <div class="card border-0 p-4 h-100 shadow-sm" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);">
+            <h6 class="text-muted fw-bold">อุปกรณ์ทั้งหมดในระบบ</h6>
+            <h1 id="statTotal" class="display-5 fw-bold text-indigo mt-2">...</h1>
+            <small class="text-muted">รวมที่อยู่ในคลังและที่กำลังถูกยืม</small>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="card border-0 p-4 h-100 shadow-sm" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%);">
+            <h6 class="text-muted fw-bold">อุปกรณ์ที่กำลังถูกยืมอยู่</h6>
+            <h1 id="statBorrowed" class="display-5 fw-bold text-warning mt-2">...</h1>
+            <small class="text-muted">รายการทำเรื่องยืมค้างอยู่</small>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="card border-0 p-4 h-100 shadow-sm" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%);">
+            <h6 class="text-muted fw-bold">อุปกรณ์พร้อมใช้งานคลัง</h6>
+            <h1 id="statAvailable" class="display-5 fw-bold text-success mt-2">...</h1>
+            <small class="text-muted">จำนวนรวมที่พร้อมให้ยืมตอนนี้</small>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="card border-0 p-4 h-100 shadow-sm" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.1) 100%);">
+            <h6 class="text-muted fw-bold">รายการต้องคืนวันนี้</h6>
+            <h1 id="statDueToday" class="display-5 fw-bold text-danger mt-2">...</h1>
+            <small class="text-muted">ครบกำหนดส่งคืนวันนี้</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Action / Alert Section -->
+      <div class="row g-4 mt-4">
+        <div class="col-md-6">
+          <div class="card border-0 p-4">
+            <h5 class="fw-bold mb-3" style="color: #4f46e5;">⚡ ลิงก์ดำเนินการด่วน</h5>
+            <div class="d-flex flex-wrap gap-2">
+              <a href="admin.html" class="btn btn-primary">➕ เพิ่ม/จัดการคลังอุปกรณ์</a>
+              <a href="borrow.html" class="btn btn-warning text-white">📦 บันทึกยืมคืนนักศึกษา</a>
+              <a href="history.html" class="btn btn-light border">📜 ตรวจสอบบันทึกธุรกรรม</a>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card border-0 p-4">
+            <h5 class="fw-bold mb-3" style="color: #ef4444;">🚨 คำแนะนำการจัดการ</h5>
+            <p class="text-muted mb-0 small">
+              ระบบนี้บันทึกข้อมูลทุกอย่างตรงลง MySQL เรียบร้อยแล้ว แอดมินสามารถจัดการรายการยืมตกหล่น หรือกดคืนสินค้าให้นักศึกษาได้จากระบบหลังบ้านในหน้า <strong>"บันทึกยืม-คืน"</strong> และ <strong>"ประวัติทั้งหมด"</strong>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let loggedAdmin = null;
+
+    // Authentication Guard
+    (function() {
+      loggedAdmin = JSON.parse(localStorage.getItem('user') || 'null');
+      if (!loggedAdmin || loggedAdmin.role !== 'admin') {
+        alert('เฉพาะผู้ดูแลระบบที่มีสิทธิ์เท่านั้นที่สามารถเข้าถึงหน้านี้ได้');
+        window.location.href = '/login.html';
+        return;
+      }
+      document.getElementById('adminName').textContent = `👤 ผู้ดูแลระบบ: ${loggedAdmin.name}`;
+    })();
+
+    function logout() {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      window.location.href = '/login.html';
+    }
+
+    function getAuthHeader() {
+      return { 'Authorization': 'Bearer ' + localStorage.getItem('token') };
+    }
+
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/borrow/stats', { headers: getAuthHeader() });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('statTotal').textContent = data.total;
+          document.getElementById('statBorrowed').textContent = data.borrowed;
+          document.getElementById('statAvailable').textContent = data.available;
+          document.getElementById('statDueToday').textContent = data.dueToday;
+        } else {
+          console.error("Fetch stats error", data);
+        }
+      } catch (err) {
+        console.error("Stats network error", err);
+      }
+    }
+
+    // Load stats initially
+    loadStats();
+  </script>
+</body>
+</html>
