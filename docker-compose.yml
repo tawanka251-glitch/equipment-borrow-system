@@ -3,6 +3,10 @@ version: '3.8'
 services:
   app:
     build: .
+    container_name: g04_app
+    networks:
+      - course_proxy
+      - appnetwork
     ports:
       - "3000:3000"
     environment:
@@ -16,6 +20,9 @@ services:
   db:
     image: mysql:8.0
     restart: always
+    container_name: g04_db
+    networks:
+      - appnetwork
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: wab_borrow_return
@@ -26,3 +33,8 @@ services:
 
 volumes:
   db_data:
+networks:
+  course_proxy:
+    external: true
+  appnetwork:
+    driver: bridge
