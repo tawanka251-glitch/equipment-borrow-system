@@ -8,7 +8,7 @@ services:
       - course_proxy
       - appnetwork
     ports:
-      - "3000:3000"
+      - "3004:3000"
     environment:
       - DB_HOST=db
       - DB_USER=root
@@ -27,7 +27,7 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: wab_borrow_return
     ports:
-      - "3306:3306"
+      - "3304:3306"
     volumes:
       - db_data:/var/lib/mysql
 
@@ -35,6 +35,7 @@ volumes:
   db_data:
 networks:
   course_proxy:
-    external: true
+    driver: bridge
   appnetwork:
     driver: bridge
+    
