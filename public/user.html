@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>ผู้ใช้งาน - ระบบยืมคืนอุปกรณ์</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: #f5f5f5;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            transition: 0.3s;
+        }
+
+        .borrow-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1050;
+        }
+
+        .borrow-modal.active {
+            display: flex;
+        }
+
+        .borrow-modal .modal-content {
+            background: #fff;
+            border-radius: 0.75rem;
+            width: min(520px, 100%);
+            padding: 1.5rem;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+        }
+
+        .borrow-modal .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .borrow-modal .modal-header h5 {
+            margin: 0;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <nav class="navbar navbar-dark bg-primary">
+        <div class="container-fluid">
+
+            <span class="navbar-brand">
+                🎓 ระบบยืมคืนอุปกรณ์ มหาวิทยาลัย
+            </span>
+
+            <a href="my-borrow.html" class="btn btn-light">
+                อุปกรณ์ของฉัน
+            </a>
+
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+
+        <h2>ค้นหาอุปกรณ์</h2>
+
+        <div class="row">
+
+            <div class="col-md-6">
+                <input type="text" id="search" class="form-control" placeholder="ค้นหาอุปกรณ์..."
+                    onkeyup="loadEquipment()">
+            </div>
+
+            <div class="col-md-3">
+
+                <select id="categoryFilter" class="form-select" onchange="loadEquipment()">
+
+                    <option value="">
+                        ทุกประเภท
+                    </option>
+
+                    <option value="กีฬา">
+                        กีฬา
+                    </option>
+
+                    <option value="อิเล็กทรอนิกส์">
+                        อิเล็กทรอนิกส์
+                    </option>
+
+                    <option value="พิธีการ">
+                        พิธีการ
+                    </option>
+
+                    <option value="โสตทัศนูปกรณ์">
+                        โสตทัศนูปกรณ์
+                    </option>
+
+                    <option value="เครื่องเสียง">
+                        เครื่องเสียง
+                    </option>
+
+                </select>
+
+            </div>
+
+        </div>
+
+        <div class="row mt-4" id="equipmentList">
+
+        </div>
+
+    </div>
+
+    <div class="borrow-modal" id="borrowModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="borrowModalTitle">ยืมอุปกรณ์</h5>
+                <button type="button" class="btn-close" aria-label="Close" onclick="closeBorrowModal()"></button>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">อุปกรณ์</label>
+                <input type="text" id="borrowItemName" class="form-control" readonly>
+            </div>
+            <div class="mb-3 row">
+                <div class="col-md-6">
+                    <label class="form-label">จำนวนที่จะยืม</label>
+                    <input type="number" id="borrowQuantity" class="form-control" min="1" value="1">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">จำนวนคงเหลือ</label>
+                    <input type="text" id="borrowAvailable" class="form-control" readonly>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">วันที่จะคืน</label>
+                <input type="datetime-local" id="borrowReturnDate" class="form-control" required>
+            </div>
+            <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary" onclick="closeBorrowModal()">ยกเลิก</button>
+                <button type="button" class="btn btn-primary" onclick="confirmBorrow()">ยืนยันยืม</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        function loadEquipment() {
+
+            const equipments =
+                JSON.parse(localStorage.getItem("equipments")) || [];
+
+            const keyword =
+                document.getElementById("search")
+                    .value.toLowerCase();
+
+            const category =
+                document.getElementById("categoryFilter")
+                    .value;
+
+            let html = "";
+
+            equipments
+                .filter(item => {
+
+                    const matchName =
+                        item.name.toLowerCase()
+                            .includes(keyword);
+
+                    const matchCategory =
+                        category === "" ||
+                        item.category === category;
+
+                    return matchName && matchCategory;
+
+                })
+                .forEach((item, index) => {
+
+                    html += `
+
+        <div class="col-md-4 mb-4">
+
+            <div class="card shadow">
+
+                <div class="card-body">
+
+                    <h4>${item.name}</h4>
+
+                    <p>
+                        ประเภท :
+                        ${item.category}
+                    </p>
+
+                    <p>
+                        คงเหลือ :
+                        ${item.quantity}
+                    </p>
+
+                    <button
+                    class="btn btn-primary w-100"
+                    onclick="openBorrowModal(${index})">
+
+                        ยืมอุปกรณ์
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        `;
+                });
+
+            document.getElementById("equipmentList")
+                .innerHTML = html;
+        }
+
+        let borrowIndex = null;
+
+        function openBorrowModal(index) {
+            const equipments =
+                JSON.parse(localStorage.getItem("equipments")) || [];
+            const item = equipments[index];
+            if (!item) return;
+
+            borrowIndex = index;
+            document.getElementById('borrowItemName').value = item.name;
+            document.getElementById('borrowAvailable').value = item.quantity;
+            document.getElementById('borrowQuantity').value = item.quantity > 0 ? 1 : 0;
+            document.getElementById('borrowQuantity').max = item.quantity;
+            document.getElementById('borrowReturnDate').value = '';
+            document.getElementById('borrowModal').classList.add('active');
+        }
+
+        function closeBorrowModal() {
+            document.getElementById('borrowModal').classList.remove('active');
+            borrowIndex = null;
+        }
+
+        function confirmBorrow() {
+            const equipments =
+                JSON.parse(localStorage.getItem("equipments")) || [];
+
+            if (borrowIndex === null || borrowIndex >= equipments.length) {
+                alert('เกิดข้อผิดพลาด โปรดเลือกอุปกรณ์ใหม่');
+                closeBorrowModal();
+                return;
+            }
+
+            const item = equipments[borrowIndex];
+            const quantity = Number(document.getElementById('borrowQuantity').value);
+            const returnDate = document.getElementById('borrowReturnDate').value;
+
+            if (!quantity || quantity < 1) {
+                alert('กรุณาระบุจำนวนที่จะยืมอย่างน้อย 1 ชิ้น');
+                return;
+            }
+            if (quantity > item.quantity) {
+                alert('จำนวนที่จะยืมต้องไม่เกินจำนวนคงเหลือ');
+                return;
+            }
+            if (!returnDate) {
+                alert('กรุณาระบุวันที่คืนอุปกรณ์');
+                return;
+            }
+            if (new Date(returnDate) <= new Date()) {
+                alert('กำหนดวันที่คืนต้องหลังจากปัจจุบัน');
+                return;
+            }
+
+            item.quantity -= quantity;
+            localStorage.setItem("equipments", JSON.stringify(equipments));
+
+            let borrowList =
+                JSON.parse(localStorage.getItem("myBorrow")) || [];
+
+            borrowList.push({
+                equipment: item.name,
+                category: item.category,
+                borrowQuantity: quantity,
+                borrowDate: new Date().toLocaleString(),
+                returnDate: new Date(returnDate).toLocaleString()
+            });
+
+            localStorage.setItem(
+                "myBorrow",
+                JSON.stringify(borrowList)
+            );
+
+            alert(`ยืมอุปกรณ์ ${quantity} ชิ้นเรียบร้อยแล้ว\nกำหนดคืน: ${new Date(returnDate).toLocaleString()}`);
+            closeBorrowModal();
+            loadEquipment();
+        }
+
+        loadEquipment();
+
+    </script>
+
+</body>
+
+</html>

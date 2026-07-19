@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ประวัติการยืม-คืนอุปกรณ์ทั้งหมด - แอดมิน</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+  <style>
+    .admin-wrapper {
+      display: flex;
+      min-height: 100vh;
+    }
+    .admin-content {
+      flex: 1;
+      padding: 2.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="admin-wrapper">
+    <!-- Sidebar -->
+    <div class="col-md-2 sidebar d-flex flex-column">
+      <div class="text-center mb-4">
+        <img src="https://upload.wikimedia.org/wikipedia/th/thumb/0/0d/Thaksin_University_Seal.svg/1200px-Thaksin_University_Seal.svg.png" width="60" class="mb-2" alt="TSU Seal">
+        <h5 class="fw-bold text-primary m-0" style="background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">TSU BORROW</h5>
+        <span class="badge bg-danger mt-1">Admin Portal</span>
+      </div>
+      <hr class="mb-4" style="opacity: 0.1;">
+      <a href="dashboard.html">🏠 แดชบอร์ด</a>
+      <a href="admin.html">🔧 จัดการคลังอุปกรณ์</a>
+      <a href="borrow.html">📦 บันทึกยืม-คืน</a>
+      <a href="history.html" class="active">📜 ประวัติทั้งหมด</a>
+      <a href="report.html">📊 รายงานสถิติ</a>
+      <a href="equipment.html" class="mt-auto border-top pt-3 text-secondary">👁️ หน้าผู้ใช้งาน</a>
+      <a href="#" onclick="logout()" class="text-danger">🚪 ออกจากระบบ</a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="admin-content">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2 class="fw-bold mb-1" style="background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">📜 ประวัติการยืม-คืนอุปกรณ์ทั้งหมด</h2>
+          <p class="text-muted">ประวัติการทำรายการยืม-คืนสำเร็จและค้างส่งคืนทั้งหมดในระบบ</p>
+        </div>
+      </div>
+
+      <!-- Filter control -->
+      <div class="card border-0 shadow-sm p-4 mb-4" style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px);">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-medium text-muted">ค้นหาตามชื่อผู้ยืมหรืออุปกรณ์</label>
+            <input type="text" id="filterKeyword" class="form-control" placeholder="พิมพ์คีย์เวิร์ดเพื่อกรองตาราง..." oninput="filterTable()">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-medium text-muted">สถานะรายการ</label>
+            <select id="filterStatus" class="form-select" onchange="filterTable()">
+              <option value="">ทั้งหมด</option>
+              <option value="borrowed">กำลังยืมอยู่</option>
+              <option value="returned">คืนเรียบร้อยแล้ว</option>
+            </select>
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <button onclick="loadAllHistory()" class="btn btn-light border w-100 py-2.5">🔄 รีเฟรชข้อมูล</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- History table -->
+      <div class="card border-0 shadow-sm p-4">
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>ผู้ยืม (ID นักศึกษา)</th>
+                <th>อุปกรณ์</th>
+                <th>จำนวน</th>
+                <th>วันที่ยืม</th>
+                <th>กำหนดส่งคืน / วันที่คืน</th>
+                <th>สถานะ</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              <!-- Loaded dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let loggedAdmin = null;
+    let rawHistory = [];
+
+    // Auth guard
+    (function() {
+      loggedAdmin = JSON.parse(localStorage.getItem('user') || 'null');
+      if (!loggedAdmin || loggedAdmin.role !== 'admin') {
+        alert('เฉพาะผู้ดูแลระบบเท่านั้น');
+        window.location.href = '/login.html';
+      }
+    })();
+
+    function logout() {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      window.location.href = '/login.html';
+    }
+
+    function getAuthHeader() {
+      return { 'Authorization': 'Bearer ' + localStorage.getItem('token') };
+    }
+
+    async function loadAllHistory() {
+      try {
+        const res = await fetch('/api/borrow/all-history', { headers: getAuthHeader() });
+        const data = await res.json();
+        if (res.ok) {
+          rawHistory = data;
+          renderTable(data);
+        }
+      } catch (err) {
+        console.error("History fetch error", err);
+      }
+    }
+
+    function renderTable(items) {
+      const tbody = document.getElementById('historyTableBody');
+      if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">ไม่พบข้อมูลประวัติการทำรายการ</td></tr>';
+        return;
+      }
+
+      let html = "";
+      items.forEach((item, index) => {
+        const isBorrowed = item.status === 'borrowed';
+        const statusBadge = isBorrowed 
+          ? `<span class="badge bg-warning text-dark">กำลังยืมอยู่</span>` 
+          : `<span class="badge bg-success">คืนเรียบร้อย</span>`;
+        
+        const borrowDate = new Date(item.borrowed_at).toLocaleString('th-TH');
+        const returnInfo = isBorrowed
+          ? `<span class="text-danger">กำหนด: ${new Date(item.return_due_date).toLocaleDateString('th-TH')}</span>`
+          : `<span class="text-success">คืนเมื่อ: ${new Date(item.returned_at).toLocaleString('th-TH')}</span>`;
+
+        html += `
+          <tr>
+            <td>${index + 1}</td>
+            <td>
+              <strong class="text-dark">${item.borrower_name}</strong>
+              <div class="text-muted small">ID: ${item.student_id || '-'}</div>
+            </td>
+            <td>
+              <strong>${item.equipmentName || 'อุปกรณ์ภายนอก'}</strong>
+              <div class="text-muted small">${item.category || 'ทั่วไป'}</div>
+            </td>
+            <td class="fw-semibold">${item.quantity} ชิ้น</td>
+            <td>${borrowDate}</td>
+            <td>${returnInfo}</td>
+            <td>${statusBadge}</td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
+    }
+
+    function filterTable() {
+      const keyword = document.getElementById('filterKeyword').value.toLowerCase();
+      const status = document.getElementById('filterStatus').value;
+
+      const filtered = rawHistory.filter(item => {
+        const matchKeyword = 
+          (item.borrower_name && item.borrower_name.toLowerCase().includes(keyword)) ||
+          (item.student_id && item.student_id.toLowerCase().includes(keyword)) ||
+          (item.equipmentName && item.equipmentName.toLowerCase().includes(keyword));
+        
+        const matchStatus = status === "" || item.status === status;
+
+        return matchKeyword && matchStatus;
+      });
+
+      renderTable(filtered);
+    }
+
+    // Initial load
+    loadAllHistory();
+  </script>
+</body>
+</html>

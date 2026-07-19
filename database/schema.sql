@@ -1,0 +1,29 @@
+-- Schema for equipment borrow system
+CREATE DATABASE IF NOT EXISTS wab_borrow_return CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE wab_borrow_return;
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  role VARCHAR(50) NOT NULL DEFAULT 'user',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS equipment (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  quantity INT DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS borrow_history (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT,
+  equipment_id INT,
+  borrowed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  returned_at DATETIME NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (equipment_id) REFERENCES equipment(id) ON DELETE SET NULL
+);

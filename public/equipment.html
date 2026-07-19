@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>รายการอุปกรณ์ - ระบบยืมคืนอุปกรณ์</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-light shadow-sm">
+    <div class="container-fluid">
+      <span class="navbar-brand d-flex align-items-center">
+        <img src="https://upload.wikimedia.org/wikipedia/th/thumb/0/0d/Thaksin_University_Seal.svg/1200px-Thaksin_University_Seal.svg.png" width="40" class="me-2">
+        🎓 ระบบยืมคืนอุปกรณ์ มหาวิทยาลัยทักษิณ
+      </span>
+      <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+        <ul class="navbar-nav align-items-center">
+          <li class="nav-item"><span id="userName" class="nav-link fw-semibold text-dark me-3"></span></li>
+          <li class="nav-item me-2"><a href="my-borrow.html" class="btn btn-primary btn-sm px-3 text-white">📦 อุปกรณ์ของฉัน</a></li>
+          <li class="nav-item"><button onclick="logout()" class="btn btn-light btn-sm px-3 border">🚪 ออกจากระบบ</button></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-5">
+    <div class="row mb-4">
+      <div class="col-12">
+        <h2 class="fw-bold mb-1" style="background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">ค้นหาและยืมอุปกรณ์</h2>
+        <p class="text-muted">ตรวจสอบสถานะสินค้าคงคลังและบันทึกการยืมอุปกรณ์ออนไลน์</p>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm p-4 mb-4" style="background: rgba(255,255,255,0.7); backdrop-filter: blur(10px);">
+      <div class="row g-3">
+        <div class="col-md-8">
+          <label class="form-label fw-medium text-muted">ค้นหาตามชื่อหรือรายละเอียด</label>
+          <input type="text" id="search" class="form-control" placeholder="พิมพ์ชื่ออุปกรณ์เพื่อค้นหา..." oninput="loadEquipment()">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-medium text-muted">ประเภทอุปกรณ์</label>
+          <select id="categoryFilter" class="form-select" onchange="loadEquipment()">
+            <option value="">ทุกประเภท</option>
+            <option value="กีฬา">กีฬา</option>
+            <option value="อิเล็กทรอนิกส์">อิเล็กทรอนิกส์</option>
+            <option value="พิธีการ">พิธีการ</option>
+            <option value="โสตทัศนูปกรณ์">โสตทัศนูปกรณ์</option>
+            <option value="เครื่องเสียง">เครื่องเสียง</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-4" id="categorySummary"></div>
+    <div class="row g-4" id="equipmentList"></div>
+  </div>
+
+  <!-- Borrow Modal -->
+  <div class="borrow-modal" id="borrowModal">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h4 class="fw-bold mb-0" style="color: #4f46e5;">ยืมอุปกรณ์</h4>
+        <button type="button" class="btn-close" onclick="closeBorrowModal()"></button>
+      </div>
+      <hr class="my-3" style="opacity: 0.1;">
+      <div class="mb-3">
+        <label class="form-label fw-semibold">อุปกรณ์ที่เลือก</label>
+        <input type="text" id="borrowItemName" class="form-control bg-light" readonly>
+      </div>
+      <div class="mb-3 row">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">จำนวนที่ต้องการยืม</label>
+          <input type="number" id="borrowQuantity" class="form-control" min="1" value="1">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">จำนวนคงเหลือในคลัง</label>
+          <input type="text" id="borrowAvailable" class="form-control bg-light" readonly>
+        </div>
+      </div>
+      <div class="mb-4">
+        <label class="form-label fw-semibold">กำหนดวันส่งคืน</label>
+        <input type="datetime-local" id="borrowReturnDate" class="form-control" required>
+      </div>
+      <div class="d-flex justify-content-end gap-2 pt-2">
+        <button type="button" class="btn btn-light px-4" onclick="closeBorrowModal()">ยกเลิก</button>
+        <button type="button" class="btn btn-primary px-4" onclick="confirmBorrow()">ยืนยันการยืม</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/auth-guard.js"></script>
+  <script>
+    // Guard: User only (admin gets redirected to dashboard)
+    const loggedUser = requireUser();
+    if (loggedUser) {
+      document.getElementById('userName').textContent = `👤 สวัสดี, ${loggedUser.name}`;
+    }
+
+    let loadedEquipments = [];
+    let selectedEqIndex = null;
+
+    async function loadEquipment() {
+      const q = document.getElementById("search").value;
+      const category = document.getElementById("categoryFilter").value;
+      let url = '/api/equipment';
+      const params = new URLSearchParams();
+      if (q) params.append('q', q);
+      if (category) params.append('category', category);
+      if (params.toString()) url += '?' + params.toString();
+
+      try {
+        const res = await fetch(url, { headers: getAuthHeader() });
+        if (res.status === 401 || res.status === 403) { logout(); return; }
+        const data = await res.json();
+        if (res.ok) {
+          loadedEquipments = data;
+          renderEquipmentGrid(data);
+          renderCategorySummary(data);
+        }
+      } catch (err) { console.error("Connection error", err); }
+    }
+
+    function renderEquipmentGrid(items) {
+      const listEl = document.getElementById("equipmentList");
+      if (items.length === 0) {
+        listEl.innerHTML = `<div class="col-12 text-center my-5"><h5 class="text-muted">🔍 ไม่พบอุปกรณ์ตามคำค้นหาของคุณ</h5></div>`;
+        return;
+      }
+      let html = "";
+      items.forEach((item, index) => {
+        const isOut = item.quantity <= 0;
+        const img = item.image || 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?auto=format&fit=crop&w=800&q=80';
+        html += `
+          <div class="col-md-4">
+            <div class="card h-100 border-0">
+              <img src="${img}" class="card-img-top" alt="${item.name}" style="height:220px;object-fit:cover;border-top-left-radius:16px;border-top-right-radius:16px;">
+              <div class="card-body d-flex flex-column p-4">
+                <span class="badge bg-primary align-self-start mb-2">${item.category}</span>
+                <h4 class="card-title fw-bold mb-2">${item.name}</h4>
+                <p class="text-muted small mb-3 flex-grow-1">${item.description || 'ไม่มีรายละเอียดของอุปกรณ์ชิ้นนี้'}</p>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <span class="text-muted fw-semibold">คงเหลือในคลัง:</span>
+                  <span class="fs-5 fw-bold ${isOut ? 'text-danger' : 'text-success'}">${item.quantity} ชิ้น</span>
+                </div>
+                <button class="btn ${isOut ? 'btn-light border text-muted' : 'btn-primary'} w-100 mt-auto"
+                  onclick="openBorrowModal(${index})" ${isOut ? 'disabled' : ''}>
+                  ${isOut ? 'สินค้าหมดคลัง' : 'ยืมอุปกรณ์'}
+                </button>
+              </div>
+            </div>
+          </div>`;
+      });
+      listEl.innerHTML = html;
+    }
+
+    function renderCategorySummary(items) {
+      const summary = items.reduce((acc, item) => {
+        if (!acc[item.category]) acc[item.category] = { count: 0, totalQty: 0 };
+        acc[item.category].count += 1;
+        acc[item.category].totalQty += Number(item.quantity || 0);
+        return acc;
+      }, {});
+      const el = document.getElementById('categorySummary');
+      let html = '';
+      Object.keys(summary).forEach(cat => {
+        html += `<div class="col-6 col-md-3">
+          <div class="card border-0 shadow-sm text-center p-3 h-100" style="background:rgba(255,255,255,0.6);">
+            <h6 class="fw-bold text-muted mb-1">${cat}</h6>
+            <div class="fs-4 fw-bold text-primary">${summary[cat].count} <span class="fs-6 fw-normal text-muted">รุ่น</span></div>
+            <small class="text-muted">รวม ${summary[cat].totalQty} ชิ้นในคลัง</small>
+          </div></div>`;
+      });
+      el.innerHTML = html || '<div class="col-12"><div class="alert alert-light text-center">ไม่มีอุปกรณ์อยู่ในระบบขณะนี้</div></div>';
+    }
+
+    function openBorrowModal(index) {
+      const item = loadedEquipments[index];
+      if (!item) return;
+      selectedEqIndex = index;
+      document.getElementById('borrowItemName').value = item.name;
+      document.getElementById('borrowAvailable').value = `${item.quantity} ชิ้น`;
+      const qtyInput = document.getElementById('borrowQuantity');
+      qtyInput.value = 1;
+      qtyInput.max = item.quantity;
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(12, 0, 0, 0);
+      const offset = tomorrow.getTimezoneOffset();
+      const local = new Date(tomorrow.getTime() - offset * 60000);
+      document.getElementById('borrowReturnDate').value = local.toISOString().slice(0, 16);
+      document.getElementById('borrowModal').classList.add('active');
+    }
+
+    function closeBorrowModal() {
+      document.getElementById('borrowModal').classList.remove('active');
+      selectedEqIndex = null;
+    }
+
+    async function confirmBorrow() {
+      if (selectedEqIndex === null) return;
+      const item = loadedEquipments[selectedEqIndex];
+      const quantity = Number(document.getElementById('borrowQuantity').value);
+      const returnDate = document.getElementById('borrowReturnDate').value;
+      if (!quantity || quantity < 1) { alert('กรุณากรอกจำนวนอย่างน้อย 1 ชิ้น'); return; }
+      if (quantity > item.quantity) { alert('จำนวนยืมมากกว่าสินค้าคงเหลือ'); return; }
+      if (!returnDate) { alert('กรุณาระบุวันที่คืน'); return; }
+      if (new Date(returnDate) <= new Date()) { alert('วันที่คืนต้องอยู่หลังจากปัจจุบัน'); return; }
+
+      try {
+        const res = await fetch('/api/borrow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+          body: JSON.stringify({ equipmentId: item.id, quantity, returnDate })
+        });
+        if (res.status === 401 || res.status === 403) { logout(); return; }
+        const data = await res.json();
+        if (res.ok) {
+          alert(`ยืมสำเร็จ ${quantity} ชิ้น!\nกรุณาคืนภายใน: ${new Date(returnDate).toLocaleString('th-TH')}`);
+          closeBorrowModal();
+          loadEquipment();
+        } else {
+          alert(data.error || 'เกิดข้อผิดพลาดในการทำรายการ');
+        }
+      } catch (err) { alert('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้'); }
+    }
+
+    loadEquipment();
+  </script>
+</body>
+</html>
